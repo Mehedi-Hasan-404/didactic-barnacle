@@ -22,6 +22,7 @@ jobs:
           mkdir -p CheckboxDemo/app/src/main/java/com/checkboxdemo
           mkdir -p CheckboxDemo/app/src/main/res/layout
           mkdir -p CheckboxDemo/app/src/main/res/values
+          mkdir -p CheckboxDemo/app/src/main/res/drawable
           mkdir -p CheckboxDemo/gradle/wrapper
 
       - name: Write gradle.properties
@@ -107,6 +108,7 @@ jobs:
               implementation("androidx.appcompat:appcompat:1.7.0")
               implementation("com.google.android.material:material:1.11.0")
               implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+              implementation("androidx.recyclerview:recyclerview:1.3.2")
           }
           EOF
 
@@ -117,7 +119,7 @@ jobs:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <application
                   android:allowBackup="true"
-                  android:label="Checkbox Demo"
+                  android:label="Video Settings Demo"
                   android:theme="@style/Theme.CheckboxDemo"
                   android:supportsRtl="true">
                   <activity
@@ -138,16 +140,22 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
               <style name="Theme.CheckboxDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-                  <item name="colorPrimary">#10B981</item>
-                  <item name="colorPrimaryVariant">#059669</item>
+                  <item name="colorPrimary">#EF4444</item>
+                  <item name="colorPrimaryVariant">#DC2626</item>
                   <item name="colorOnPrimary">#FFFFFF</item>
-                  <item name="colorSecondary">#10B981</item>
+                  <item name="colorSecondary">#EF4444</item>
                   <item name="colorOnSecondary">#FFFFFF</item>
-                  <item name="android:colorBackground">#121212</item>
-                  <item name="colorSurface">#1E1E1E</item>
+                  <item name="android:colorBackground">#000000</item>
+                  <item name="colorSurface">#1F1F1F</item>
                   <item name="colorOnSurface">#FFFFFF</item>
                   <item name="android:statusBarColor">#000000</item>
                   <item name="android:windowLightStatusBar">false</item>
+              </style>
+
+              <style name="TabTextStyle" parent="TextAppearance.Design.Tab">
+                  <item name="android:textSize">14sp</item>
+                  <item name="android:textStyle">bold</item>
+                  <item name="android:textAllCaps">true</item>
               </style>
           </resources>
           EOF
@@ -157,116 +165,485 @@ jobs:
           cat > CheckboxDemo/app/src/main/res/values/strings.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <string name="app_name">Checkbox Demo</string>
+              <string name="app_name">Video Settings Demo</string>
           </resources>
           EOF
 
-      - name: Write colors.xml
+      - name: Write ripple_item_bg.xml
         run: |
-          cat > CheckboxDemo/app/src/main/res/values/colors.xml << 'EOF'
+          cat > CheckboxDemo/app/src/main/res/drawable/ripple_item_bg.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="white">#FFFFFF</color>
-              <color name="text_secondary">#94A3B8</color>
-          </resources>
+          <ripple xmlns:android="http://schemas.android.com/apk/res/android"
+              android:color="#33FFFFFF">
+              <item android:id="@android:id/mask">
+                  <shape android:shape="rectangle">
+                      <solid android:color="@android:color/white" />
+                  </shape>
+              </item>
+          </ripple>
+          EOF
+
+      - name: Write dialog_player_settings.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/layout/dialog_player_settings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <androidx.constraintlayout.widget.ConstraintLayout
+              xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+              <com.google.android.material.card.MaterialCardView
+                  android:id="@+id/dialogCard"
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="24dp"
+                  android:layout_marginEnd="24dp"
+                  android:layout_marginTop="32dp"
+                  android:layout_marginBottom="32dp"
+                  app:layout_constraintTop_toTopOf="parent"
+                  app:layout_constraintBottom_toBottomOf="parent"
+                  app:layout_constraintStart_toStartOf="parent"
+                  app:layout_constraintEnd_toEndOf="parent"
+                  app:layout_constraintVertical_bias="0.5"
+                  app:cardCornerRadius="28dp"
+                  app:cardElevation="6dp"
+                  app:cardBackgroundColor="#1F1F1F">
+
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="vertical">
+
+                      <RelativeLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="56dp"
+                          android:paddingStart="20dp"
+                          android:paddingEnd="16dp"
+                          android:background="#1F1F1F">
+
+                          <TextView
+                              android:id="@+id/tvTitle"
+                              android:layout_width="wrap_content"
+                              android:layout_height="wrap_content"
+                              android:layout_centerVertical="true"
+                              android:text="Video Settings"
+                              android:textColor="@android:color/white"
+                              android:textSize="18sp"
+                              android:textStyle="bold" />
+
+                          <ImageButton
+                              android:id="@+id/btnClose"
+                              android:layout_width="40dp"
+                              android:layout_height="40dp"
+                              android:layout_alignParentEnd="true"
+                              android:layout_centerVertical="true"
+                              android:background="?attr/selectableItemBackgroundBorderless"
+                              android:src="@android:drawable/ic_menu_close_clear_cancel"
+                              android:tint="@android:color/white"
+                              android:contentDescription="Close" />
+                      </RelativeLayout>
+
+                      <com.google.android.material.tabs.TabLayout
+                          android:id="@+id/tabLayout"
+                          android:layout_width="match_parent"
+                          android:layout_height="48dp"
+                          android:background="#252525"
+                          app:tabIndicatorColor="#EF4444"
+                          app:tabIndicatorHeight="2dp"
+                          app:tabSelectedTextColor="#EF4444"
+                          app:tabTextColor="#999999"
+                          app:tabMode="fixed"
+                          app:tabGravity="fill"
+                          app:tabTextAppearance="@style/TabTextStyle" />
+
+                      <androidx.recyclerview.widget.RecyclerView
+                          android:id="@+id/recyclerView"
+                          android:layout_width="match_parent"
+                          android:layout_height="200dp"
+                          android:paddingTop="4dp"
+                          android:paddingBottom="4dp"
+                          android:clipToPadding="false"
+                          android:scrollbars="vertical" />
+
+                      <View
+                          android:layout_width="match_parent"
+                          android:layout_height="1dp"
+                          android:background="#333333" />
+
+                      <LinearLayout
+                          android:layout_width="match_parent"
+                          android:layout_height="wrap_content"
+                          android:orientation="horizontal"
+                          android:gravity="end"
+                          android:padding="12dp"
+                          android:background="#1F1F1F">
+
+                          <com.google.android.material.button.MaterialButton
+                              android:id="@+id/btnCancel"
+                              style="@style/Widget.MaterialComponents.Button.TextButton"
+                              android:layout_width="wrap_content"
+                              android:layout_height="40dp"
+                              android:text="CANCEL"
+                              android:textColor="#999999"
+                              android:textSize="14sp"
+                              android:layout_marginEnd="8dp" />
+
+                          <com.google.android.material.button.MaterialButton
+                              android:id="@+id/btnApply"
+                              style="@style/Widget.MaterialComponents.Button.TextButton"
+                              android:layout_width="wrap_content"
+                              android:layout_height="40dp"
+                              android:text="APPLY"
+                              android:textColor="#EF4444"
+                              android:textSize="14sp" />
+                      </LinearLayout>
+
+                  </LinearLayout>
+              </com.google.android.material.card.MaterialCardView>
+
+          </androidx.constraintlayout.widget.ConstraintLayout>
+          EOF
+
+      - name: Write item_track_option.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/layout/item_track_option.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout
+              xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="horizontal"
+              android:paddingStart="20dp"
+              android:paddingEnd="12dp"
+              android:paddingTop="6dp"
+              android:paddingBottom="6dp"
+              android:background="@drawable/ripple_item_bg"
+              android:clickable="true"
+              android:focusable="true"
+              android:gravity="center_vertical"
+              android:minHeight="48dp">
+
+              <LinearLayout
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:layout_weight="1"
+                  android:orientation="vertical">
+
+                  <TextView
+                      android:id="@+id/tvPrimary"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:textColor="@android:color/white"
+                      android:textSize="12sp"
+                      android:textStyle="bold"
+                      android:fontFamily="sans-serif-medium" />
+
+                  <TextView
+                      android:id="@+id/tvSecondary"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:textColor="#999999"
+                      android:textSize="11sp"
+                      android:layout_marginTop="1dp" />
+
+              </LinearLayout>
+
+              <RadioButton
+                  android:id="@+id/radioToggle"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="8dp"
+                  android:clickable="false"
+                  android:focusable="false"
+                  android:buttonTint="#EF4444" />
+
+              <com.google.android.material.checkbox.MaterialCheckBox
+                  android:id="@+id/checkToggle"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_marginStart="8dp"
+                  android:clickable="false"
+                  android:focusable="false"
+                  android:visibility="gone" />
+
+          </LinearLayout>
           EOF
 
       - name: Write activity_main.xml
         run: |
           cat > CheckboxDemo/app/src/main/res/layout/activity_main.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <androidx.constraintlayout.widget.ConstraintLayout
+          <FrameLayout
               xmlns:android="http://schemas.android.com/apk/res/android"
-              xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:background="#121212">
+              android:background="#000000">
 
-              <LinearLayout
-                  android:id="@+id/card"
-                  android:layout_width="0dp"
+              <com.google.android.material.button.MaterialButton
+                  android:id="@+id/btnOpenDialog"
+                  android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
-                  android:orientation="vertical"
-                  android:background="#1E1E1E"
-                  android:padding="20dp"
-                  android:elevation="4dp"
-                  android:layout_margin="24dp"
-                  app:layout_constraintTop_toTopOf="parent"
-                  app:layout_constraintStart_toStartOf="parent"
-                  app:layout_constraintEnd_toEndOf="parent"
-                  app:layout_constraintBottom_toBottomOf="parent">
+                  android:layout_gravity="center"
+                  android:text="Open Video Settings"
+                  android:textColor="#FFFFFF"
+                  android:backgroundTint="#EF4444"
+                  android:textSize="16sp" />
 
-                  <TextView
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="SEND OPTIONS"
-                      android:textAllCaps="true"
-                      android:textColor="#94A3B8"
-                      android:textSize="10sp"
-                      android:textStyle="bold"
-                      android:letterSpacing="0.08"
-                      android:layout_marginBottom="16dp" />
+          </FrameLayout>
+          EOF
 
-                  <View
-                      android:layout_width="match_parent"
-                      android:layout_height="1dp"
-                      android:background="#2A2A2A"
-                      android:layout_marginBottom="16dp" />
+      - name: Write TrackItem.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/TrackItem.kt << 'EOF'
+          package com.checkboxdemo
 
-                  <LinearLayout
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:orientation="horizontal">
+          data class TrackItem(
+              val primary: String,
+              val secondary: String,
+              val isSelected: Boolean,
+              val isRadio: Boolean = true
+          )
+          EOF
 
-                      <com.google.android.material.checkbox.MaterialCheckBox
-                          android:id="@+id/silentCheck"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="Silent"
-                          android:textSize="10sp"
-                          android:textStyle="bold"
-                          android:textColor="#FFFFFF" />
+      - name: Write TrackAdapter.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/TrackAdapter.kt << 'EOF'
+          package com.checkboxdemo
 
-                      <com.google.android.material.checkbox.MaterialCheckBox
-                          android:id="@+id/protectCheck"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:layout_marginStart="16dp"
-                          android:text="Protect"
-                          android:textSize="10sp"
-                          android:textStyle="bold"
-                          android:textColor="#FFFFFF" />
+          import android.view.LayoutInflater
+          import android.view.View
+          import android.view.ViewGroup
+          import android.widget.CheckBox
+          import android.widget.RadioButton
+          import android.widget.TextView
+          import androidx.recyclerview.widget.RecyclerView
 
-                      <com.google.android.material.checkbox.MaterialCheckBox
-                          android:id="@+id/hidePreviewCheck"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:layout_marginStart="16dp"
-                          android:text="Hide Preview"
-                          android:textSize="10sp"
-                          android:textStyle="bold"
-                          android:textColor="#FFFFFF" />
+          class TrackAdapter(
+              private val onSelect: (Int) -> Unit
+          ) : RecyclerView.Adapter<TrackAdapter.VH>() {
 
-                  </LinearLayout>
+              private val items = mutableListOf<TrackItem>()
 
-                  <View
-                      android:layout_width="match_parent"
-                      android:layout_height="1dp"
-                      android:background="#2A2A2A"
-                      android:layout_marginTop="16dp"
-                      android:layout_marginBottom="16dp" />
+              fun submit(list: List<TrackItem>) {
+                  items.clear()
+                  items.addAll(list)
+                  notifyDataSetChanged()
+              }
 
-                  <TextView
-                      android:id="@+id/statusText"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="No options selected"
-                      android:textColor="#94A3B8"
-                      android:textSize="12sp" />
+              fun updateSelection(selectedIndex: Int) {
+                  items.forEachIndexed { i, item ->
+                      val newSelected = i == selectedIndex
+                      if (item.isSelected != newSelected) {
+                          items[i] = item.copy(isSelected = newSelected)
+                          notifyItemChanged(i)
+                      }
+                  }
+              }
 
-              </LinearLayout>
+              fun toggleCheckbox(selectedIndex: Int) {
+                  val item = items[selectedIndex]
+                  items[selectedIndex] = item.copy(isSelected = !item.isSelected)
+                  notifyItemChanged(selectedIndex)
+              }
 
-          </androidx.constraintlayout.widget.ConstraintLayout>
+              inner class VH(view: View) : RecyclerView.ViewHolder(view) {
+                  private val tvPrimary: TextView = view.findViewById(R.id.tvPrimary)
+                  private val tvSecondary: TextView = view.findViewById(R.id.tvSecondary)
+                  private val radioToggle: RadioButton = view.findViewById(R.id.radioToggle)
+                  private val checkToggle: CheckBox = view.findViewById(R.id.checkToggle)
+
+                  init {
+                      view.setOnClickListener { onSelect(adapterPosition) }
+                  }
+
+                  fun bind(item: TrackItem) {
+                      tvPrimary.text = item.primary
+                      if (item.secondary.isEmpty()) {
+                          tvSecondary.visibility = View.GONE
+                      } else {
+                          tvSecondary.visibility = View.VISIBLE
+                          tvSecondary.text = item.secondary
+                      }
+
+                      if (item.isRadio) {
+                          radioToggle.visibility = View.VISIBLE
+                          checkToggle.visibility = View.GONE
+                          radioToggle.isChecked = item.isSelected
+                      } else {
+                          radioToggle.visibility = View.GONE
+                          checkToggle.visibility = View.VISIBLE
+                          checkToggle.isChecked = item.isSelected
+                      }
+                  }
+              }
+
+              override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+                  val view = LayoutInflater.from(parent.context)
+                      .inflate(R.layout.item_track_option, parent, false)
+                  return VH(view)
+              }
+
+              override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(items[position])
+              override fun getItemCount() = items.size
+          }
+          EOF
+
+      - name: Write MockData.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/MockData.kt << 'EOF'
+          package com.checkboxdemo
+
+          object MockData {
+
+              val videoTracks = listOf(
+                  TrackItem("Auto",               "",                   isSelected = true,  isRadio = true),
+                  TrackItem("None",               "",                   isSelected = false, isRadio = true),
+                  TrackItem("3840 × 2160",        "15.20 Mbps",         isSelected = false, isRadio = true),
+                  TrackItem("1920 × 1080",        "8.50 Mbps",          isSelected = false, isRadio = true),
+                  TrackItem("1280 × 720",         "4.80 Mbps",          isSelected = false, isRadio = true),
+                  TrackItem("854 × 480",          "2.10 Mbps",          isSelected = false, isRadio = true),
+                  TrackItem("640 × 360",          "0.90 Mbps",          isSelected = false, isRadio = true),
+                  TrackItem("426 × 240",          "0.40 Mbps",          isSelected = false, isRadio = true)
+              )
+
+              val audioTracks = listOf(
+                  TrackItem("Auto",               "Automatic audio",    isSelected = true,  isRadio = true),
+                  TrackItem("None",               "No audio",           isSelected = false, isRadio = true),
+                  TrackItem("English • Stereo",   "192 kbps",           isSelected = false, isRadio = true),
+                  TrackItem("English • Surround 5.1", "384 kbps",       isSelected = false, isRadio = true),
+                  TrackItem("Spanish • Stereo",   "128 kbps",           isSelected = false, isRadio = true),
+                  TrackItem("French • Mono",      "96 kbps",            isSelected = false, isRadio = true)
+              )
+
+              val subtitleTracks = listOf(
+                  TrackItem("Auto",               "Automatic subtitles",isSelected = true,  isRadio = true),
+                  TrackItem("None",               "No subtitles",       isSelected = false, isRadio = true),
+                  TrackItem("English",            "Subtitles",          isSelected = false, isRadio = true),
+                  TrackItem("Spanish",            "Subtitles",          isSelected = false, isRadio = true),
+                  TrackItem("French",             "Subtitles",          isSelected = false, isRadio = true)
+              )
+
+              val speedTracks = listOf(
+                  TrackItem("0.25x",              "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("0.5x",               "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("0.75x",              "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("1.0x",               "Playback speed",     isSelected = true,  isRadio = true),
+                  TrackItem("1.25x",              "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("1.5x",               "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("1.75x",              "Playback speed",     isSelected = false, isRadio = true),
+                  TrackItem("2.0x",               "Playback speed",     isSelected = false, isRadio = true)
+              )
+          }
+          EOF
+
+      - name: Write VideoSettingsDialog.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/VideoSettingsDialog.kt << 'EOF'
+          package com.checkboxdemo
+
+          import android.content.Context
+          import android.os.Bundle
+          import android.view.ViewGroup
+          import android.view.Window
+          import android.widget.ImageButton
+          import android.widget.Toast
+          import androidx.appcompat.app.AppCompatDialog
+          import androidx.recyclerview.widget.LinearLayoutManager
+          import androidx.recyclerview.widget.RecyclerView
+          import com.google.android.material.button.MaterialButton
+          import com.google.android.material.tabs.TabLayout
+
+          class VideoSettingsDialog(context: Context) : AppCompatDialog(context) {
+
+              private lateinit var recyclerView: RecyclerView
+              private lateinit var tabLayout: TabLayout
+              private lateinit var adapter: TrackAdapter
+
+              private val videoItems  = MockData.videoTracks.toMutableList()
+              private val audioItems  = MockData.audioTracks.toMutableList()
+              private val subtitleItems = MockData.subtitleTracks.toMutableList()
+              private val speedItems  = MockData.speedTracks.toMutableList()
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  requestWindowFeature(Window.FEATURE_NO_TITLE)
+                  setContentView(R.layout.dialog_player_settings)
+
+                  val dm = context.resources.displayMetrics
+                  val width = (dm.widthPixels * 0.85).toInt()
+                  window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+                  window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+                  recyclerView = findViewById(R.id.recyclerView)!!
+                  tabLayout    = findViewById(R.id.tabLayout)!!
+                  val btnClose  = findViewById<ImageButton>(R.id.btnClose)!!
+                  val btnCancel = findViewById<MaterialButton>(R.id.btnCancel)!!
+                  val btnApply  = findViewById<MaterialButton>(R.id.btnApply)!!
+
+                  btnClose.setOnClickListener  { dismiss() }
+                  btnCancel.setOnClickListener { dismiss() }
+                  btnApply.setOnClickListener  {
+                      Toast.makeText(context, "Settings applied!", Toast.LENGTH_SHORT).show()
+                      dismiss()
+                  }
+
+                  recyclerView.layoutManager = LinearLayoutManager(context)
+                  adapter = TrackAdapter { index -> onItemSelected(index) }
+                  recyclerView.adapter = adapter
+
+                  // Build tabs
+                  val tabs = listOf("Video", "Audio", "Subtitles", "Speed")
+                  tabs.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
+
+                  tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                      override fun onTabSelected(tab: TabLayout.Tab?) {
+                          when (tab?.position) {
+                              0 -> showVideo()
+                              1 -> showAudio()
+                              2 -> showSubtitles()
+                              3 -> showSpeed()
+                          }
+                      }
+                      override fun onTabUnselected(tab: TabLayout.Tab?) {}
+                      override fun onTabReselected(tab: TabLayout.Tab?) {}
+                  })
+
+                  // Show Video tab by default
+                  showVideo()
+              }
+
+              private var currentTab = 0
+
+              private fun onItemSelected(index: Int) {
+                  when (currentTab) {
+                      0 -> { adapter.updateSelection(index); videoItems.forEachIndexed { i, item -> if (i != index && videoItems[i].isSelected) { /* reset */ } } }
+                      1 -> adapter.updateSelection(index)
+                      2 -> adapter.updateSelection(index)
+                      3 -> adapter.updateSelection(index)
+                  }
+              }
+
+              private fun showVideo() {
+                  currentTab = 0
+                  adapter.submit(videoItems)
+              }
+
+              private fun showAudio() {
+                  currentTab = 1
+                  adapter.submit(audioItems)
+              }
+
+              private fun showSubtitles() {
+                  currentTab = 2
+                  adapter.submit(subtitleItems)
+              }
+
+              private fun showSpeed() {
+                  currentTab = 3
+                  adapter.submit(speedItems)
+              }
+          }
           EOF
 
       - name: Write MainActivity.kt
@@ -286,24 +663,10 @@ jobs:
                   super.onCreate(savedInstanceState)
                   binding = ActivityMainBinding.inflate(layoutInflater)
                   setContentView(binding.root)
-                  setupCheckboxes()
-              }
 
-              private fun setupCheckboxes() {
-                  listOf(binding.silentCheck, binding.protectCheck, binding.hidePreviewCheck)
-                      .forEach { it.setOnCheckedChangeListener { _, _ -> updateStatus() } }
-              }
-
-              private fun updateStatus() {
-                  val selected = buildList {
-                      if (binding.silentCheck.isChecked) add("Silent")
-                      if (binding.protectCheck.isChecked) add("Protect")
-                      if (binding.hidePreviewCheck.isChecked) add("Hide Preview")
+                  binding.btnOpenDialog.setOnClickListener {
+                      VideoSettingsDialog(this).show()
                   }
-                  binding.statusText.text = if (selected.isEmpty())
-                      "No options selected"
-                  else
-                      "Active: ${selected.joinToString(" · ")}"
               }
           }
           EOF
