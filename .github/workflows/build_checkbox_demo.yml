@@ -1,0 +1,344 @@
+name: Build Checkbox Demo APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Create Project & Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Create project structure
+        run: |
+          mkdir -p CheckboxDemo/app/src/main/java/com/checkboxdemo
+          mkdir -p CheckboxDemo/app/src/main/res/layout
+          mkdir -p CheckboxDemo/app/src/main/res/values
+          mkdir -p CheckboxDemo/gradle/wrapper
+
+      - name: Write settings.gradle.kts
+        run: |
+          cat > CheckboxDemo/settings.gradle.kts << 'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "CheckboxDemo"
+          include(":app")
+          EOF
+
+      - name: Write root build.gradle.kts
+        run: |
+          cat > CheckboxDemo/build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application") version "8.3.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.23" apply false
+          }
+          EOF
+
+      - name: Write app/build.gradle.kts
+        run: |
+          cat > CheckboxDemo/app/build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+
+          android {
+              namespace = "com.checkboxdemo"
+              compileSdk = 34
+
+              defaultConfig {
+                  applicationId = "com.checkboxdemo"
+                  minSdk = 24
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+
+              buildTypes {
+                  debug {
+                      isDebuggable = true
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+
+              buildFeatures {
+                  viewBinding = true
+              }
+          }
+
+          dependencies {
+              implementation("androidx.core:core-ktx:1.13.1")
+              implementation("androidx.appcompat:appcompat:1.7.0")
+              implementation("com.google.android.material:material:1.11.0")
+              implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+          }
+          EOF
+
+      - name: Write AndroidManifest.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:allowBackup="true"
+                  android:label="Checkbox Demo"
+                  android:theme="@style/Theme.CheckboxDemo"
+                  android:supportsRtl="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+      - name: Write themes.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/values/themes.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="Theme.CheckboxDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+                  <item name="colorPrimary">#10B981</item>
+                  <item name="colorPrimaryVariant">#059669</item>
+                  <item name="colorOnPrimary">#FFFFFF</item>
+                  <item name="colorSecondary">#10B981</item>
+                  <item name="colorOnSecondary">#FFFFFF</item>
+                  <item name="android:colorBackground">#121212</item>
+                  <item name="colorSurface">#1E1E1E</item>
+                  <item name="colorOnSurface">#FFFFFF</item>
+                  <item name="android:statusBarColor">#000000</item>
+                  <item name="android:windowLightStatusBar">false</item>
+              </style>
+          </resources>
+          EOF
+
+      - name: Write strings.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Checkbox Demo</string>
+          </resources>
+          EOF
+
+      - name: Write colors.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="white">#FFFFFF</color>
+              <color name="text_secondary">#94A3B8</color>
+          </resources>
+          EOF
+
+      - name: Write activity_main.xml
+        run: |
+          cat > CheckboxDemo/app/src/main/res/layout/activity_main.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <androidx.constraintlayout.widget.ConstraintLayout
+              xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#121212">
+
+              <LinearLayout
+                  android:id="@+id/card"
+                  android:layout_width="0dp"
+                  android:layout_height="wrap_content"
+                  android:orientation="vertical"
+                  android:background="#1E1E1E"
+                  android:padding="20dp"
+                  android:elevation="4dp"
+                  android:layout_margin="24dp"
+                  app:layout_constraintTop_toTopOf="parent"
+                  app:layout_constraintStart_toStartOf="parent"
+                  app:layout_constraintEnd_toEndOf="parent"
+                  app:layout_constraintBottom_toBottomOf="parent">
+
+                  <TextView
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="SEND OPTIONS"
+                      android:textAllCaps="true"
+                      android:textColor="#94A3B8"
+                      android:textSize="10sp"
+                      android:textStyle="bold"
+                      android:letterSpacing="0.08"
+                      android:layout_marginBottom="16dp" />
+
+                  <View
+                      android:layout_width="match_parent"
+                      android:layout_height="1dp"
+                      android:background="#2A2A2A"
+                      android:layout_marginBottom="16dp" />
+
+                  <LinearLayout
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      android:orientation="horizontal">
+
+                      <com.google.android.material.checkbox.MaterialCheckBox
+                          android:id="@+id/silentCheck"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:text="Silent"
+                          android:textSize="10sp"
+                          android:textStyle="bold"
+                          android:textColor="#FFFFFF" />
+
+                      <com.google.android.material.checkbox.MaterialCheckBox
+                          android:id="@+id/protectCheck"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:layout_marginStart="16dp"
+                          android:text="Protect"
+                          android:textSize="10sp"
+                          android:textStyle="bold"
+                          android:textColor="#FFFFFF" />
+
+                      <com.google.android.material.checkbox.MaterialCheckBox
+                          android:id="@+id/hidePreviewCheck"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:layout_marginStart="16dp"
+                          android:text="Hide Preview"
+                          android:textSize="10sp"
+                          android:textStyle="bold"
+                          android:textColor="#FFFFFF" />
+
+                  </LinearLayout>
+
+                  <View
+                      android:layout_width="match_parent"
+                      android:layout_height="1dp"
+                      android:background="#2A2A2A"
+                      android:layout_marginTop="16dp"
+                      android:layout_marginBottom="16dp" />
+
+                  <TextView
+                      android:id="@+id/statusText"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:text="No options selected"
+                      android:textColor="#94A3B8"
+                      android:textSize="12sp" />
+
+              </LinearLayout>
+
+          </androidx.constraintlayout.widget.ConstraintLayout>
+          EOF
+
+      - name: Write MainActivity.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/MainActivity.kt << 'EOF'
+          package com.checkboxdemo
+
+          import android.os.Bundle
+          import androidx.appcompat.app.AppCompatActivity
+          import com.checkboxdemo.databinding.ActivityMainBinding
+
+          class MainActivity : AppCompatActivity() {
+
+              private lateinit var binding: ActivityMainBinding
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  binding = ActivityMainBinding.inflate(layoutInflater)
+                  setContentView(binding.root)
+                  setupCheckboxes()
+              }
+
+              private fun setupCheckboxes() {
+                  listOf(binding.silentCheck, binding.protectCheck, binding.hidePreviewCheck)
+                      .forEach { it.setOnCheckedChangeListener { _, _ -> updateStatus() } }
+              }
+
+              private fun updateStatus() {
+                  val selected = buildList {
+                      if (binding.silentCheck.isChecked) add("Silent")
+                      if (binding.protectCheck.isChecked) add("Protect")
+                      if (binding.hidePreviewCheck.isChecked) add("Hide Preview")
+                  }
+                  binding.statusText.text = if (selected.isEmpty())
+                      "No options selected"
+                  else
+                      "Active: ${selected.joinToString(" · ")}"
+              }
+          }
+          EOF
+
+      - name: Write gradle-wrapper.properties
+        run: |
+          cat > CheckboxDemo/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.6-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+      - name: Download Gradle wrapper jar
+        run: |
+          curl -sL "https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o CheckboxDemo/gradle/wrapper/gradle-wrapper.jar
+
+      - name: Write gradlew script
+        run: |
+          cat > CheckboxDemo/gradlew << 'EOF'
+          #!/usr/bin/env sh
+          APP_HOME=$(cd "$(dirname "$0")" && pwd)
+          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+          if [ -n "$JAVA_HOME" ]; then
+            JAVACMD="$JAVA_HOME/bin/java"
+          else
+            JAVACMD="java"
+          fi
+          exec "$JAVACMD" -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          EOF
+          chmod +x CheckboxDemo/gradlew
+
+      - name: Build debug APK
+        working-directory: CheckboxDemo
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CheckboxDemo-debug
+          path: CheckboxDemo/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
