@@ -298,60 +298,108 @@ jobs:
               android:paddingTop="8dp"
               android:paddingBottom="8dp">
 
-              <!-- Auto radio button (pre-selected) -->
-              <RadioGroup
-                  android:id="@+id/radioGroupAuto"
+              <!-- Auto row: label on left, radio on right -->
+              <LinearLayout
                   android:layout_width="match_parent"
-                  android:layout_height="wrap_content">
+                  android:layout_height="wrap_content"
+                  android:orientation="horizontal"
+                  android:gravity="center_vertical"
+                  android:layout_marginBottom="4dp">
 
-                  <com.google.android.material.radiobutton.MaterialRadioButton
-                      android:id="@+id/radioAuto"
+                  <TextView
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:text="Auto"
+                      android:textColor="#FFFFFF"
+                      android:textSize="14sp" />
+
+                  <RadioGroup
+                      android:id="@+id/radioGroupAuto"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content">
+
+                      <com.google.android.material.radiobutton.MaterialRadioButton
+                          android:id="@+id/radioAuto"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:checked="true"
+                          android:buttonTint="#EF4444" />
+
+                  </RadioGroup>
+
+              </LinearLayout>
+
+              <!-- 1920x1080 row: label on left, checkbox on right -->
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:orientation="horizontal"
+                  android:gravity="center_vertical"
+                  android:layout_marginBottom="4dp">
+
+                  <TextView
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:text="1920x1080, 8 Mbps"
+                      android:textColor="#FFFFFF"
+                      android:textSize="14sp" />
+
+                  <com.google.android.material.checkbox.MaterialCheckBox
+                      android:id="@+id/check1080p"
                       android:layout_width="wrap_content"
                       android:layout_height="wrap_content"
-                      android:text="Auto"
-                      android:checked="true"
-                      android:textColor="#FFFFFF"
-                      android:textSize="14sp"
                       android:buttonTint="#EF4444" />
 
-              </RadioGroup>
+              </LinearLayout>
 
-              <View
-                  android:layout_width="match_parent"
-                  android:layout_height="1dp"
-                  android:background="#2A2A2A"
-                  android:layout_marginTop="12dp"
-                  android:layout_marginBottom="12dp" />
-
-              <!-- Quality checkboxes -->
-              <com.google.android.material.checkbox.MaterialCheckBox
-                  android:id="@+id/check1080p"
+              <!-- 720x1280 row: label on left, checkbox on right -->
+              <LinearLayout
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:text="1920x1080, 8 Mbps"
-                  android:textColor="#FFFFFF"
-                  android:textSize="14sp"
-                  android:buttonTint="#EF4444"
-                  android:layout_marginBottom="4dp" />
+                  android:orientation="horizontal"
+                  android:gravity="center_vertical"
+                  android:layout_marginBottom="4dp">
 
-              <com.google.android.material.checkbox.MaterialCheckBox
-                  android:id="@+id/check720p"
+                  <TextView
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:text="720x1280, 4 Mbps"
+                      android:textColor="#FFFFFF"
+                      android:textSize="14sp" />
+
+                  <com.google.android.material.checkbox.MaterialCheckBox
+                      android:id="@+id/check720p"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:buttonTint="#EF4444" />
+
+              </LinearLayout>
+
+              <!-- 480x480 row: label on left, checkbox on right -->
+              <LinearLayout
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content"
-                  android:text="720x1280, 4 Mbps"
-                  android:textColor="#FFFFFF"
-                  android:textSize="14sp"
-                  android:buttonTint="#EF4444"
-                  android:layout_marginBottom="4dp" />
+                  android:orientation="horizontal"
+                  android:gravity="center_vertical">
 
-              <com.google.android.material.checkbox.MaterialCheckBox
-                  android:id="@+id/check480p"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                  android:text="480x480, 2 Mbps"
-                  android:textColor="#FFFFFF"
-                  android:textSize="14sp"
-                  android:buttonTint="#EF4444" />
+                  <TextView
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:text="480x480, 2 Mbps"
+                      android:textColor="#FFFFFF"
+                      android:textSize="14sp" />
+
+                  <com.google.android.material.checkbox.MaterialCheckBox
+                      android:id="@+id/check480p"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:buttonTint="#EF4444" />
+
+              </LinearLayout>
 
           </LinearLayout>
           EOF
@@ -400,16 +448,44 @@ jobs:
               private fun showQualityDialog() {
                   val dialogBinding = DialogQualityBinding.inflate(LayoutInflater.from(this))
 
-                  // Auto radio is pre-checked via XML; ensure checkboxes start unchecked
+                  // Start state: Auto checked, all checkboxes unchecked
+                  dialogBinding.radioAuto.isChecked = true
                   dialogBinding.check1080p.isChecked = false
                   dialogBinding.check720p.isChecked = false
                   dialogBinding.check480p.isChecked = false
+
+                  val checkboxes = listOf(
+                      dialogBinding.check1080p,
+                      dialogBinding.check720p,
+                      dialogBinding.check480p
+                  )
+
+                  // When any checkbox is toggled:
+                  // - If it's being checked → uncheck the Auto radio
+                  // - If all checkboxes become unchecked → re-select Auto radio
+                  checkboxes.forEach { checkbox ->
+                      checkbox.setOnCheckedChangeListener { _, isChecked ->
+                          if (isChecked) {
+                              dialogBinding.radioAuto.isChecked = false
+                          } else {
+                              val anyChecked = checkboxes.any { it.isChecked }
+                              if (!anyChecked) {
+                                  dialogBinding.radioAuto.isChecked = true
+                              }
+                          }
+                      }
+                  }
+
+                  // When Auto radio is manually tapped → uncheck all checkboxes
+                  dialogBinding.radioAuto.setOnClickListener {
+                      checkboxes.forEach { it.isChecked = false }
+                      dialogBinding.radioAuto.isChecked = true
+                  }
 
                   MaterialAlertDialogBuilder(this)
                       .setTitle("Video Quality")
                       .setView(dialogBinding.root)
                       .setPositiveButton("Apply") { dialog, _ ->
-                          // Handle selection here if needed
                           dialog.dismiss()
                       }
                       .setNegativeButton("Cancel") { dialog, _ ->
