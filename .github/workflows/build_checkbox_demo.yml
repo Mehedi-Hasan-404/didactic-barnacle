@@ -349,6 +349,7 @@ jobs:
 
               </LinearLayout>
 
+              <!-- Radio: used for Auto / None rows -->
               <RadioButton
                   android:id="@+id/radioToggle"
                   android:layout_width="wrap_content"
@@ -356,8 +357,10 @@ jobs:
                   android:layout_marginStart="8dp"
                   android:clickable="false"
                   android:focusable="false"
-                  android:buttonTint="#EF4444" />
+                  android:buttonTint="#EF4444"
+                  android:visibility="gone" />
 
+              <!-- MaterialCheckBox: used for quality rows, EF4444 via theme colorPrimary -->
               <com.google.android.material.checkbox.MaterialCheckBox
                   android:id="@+id/checkToggle"
                   android:layout_width="wrap_content"
@@ -402,8 +405,60 @@ jobs:
               val primary: String,
               val secondary: String,
               val isSelected: Boolean,
-              val isRadio: Boolean = true
+              // true  = RadioButton (Auto / None rows)
+              // false = MaterialCheckBox (quality rows)
+              val isRadio: Boolean
           )
+          EOF
+
+      - name: Write MockData.kt
+        run: |
+          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/MockData.kt << 'EOF'
+          package com.checkboxdemo
+
+          object MockData {
+
+              // Auto & None use radio=true, quality rows use radio=false (checkbox)
+              fun videoTracks() = listOf(
+                  TrackItem("Auto",        "",           isSelected = true,  isRadio = true),
+                  TrackItem("None",        "",           isSelected = false, isRadio = true),
+                  TrackItem("3840 × 2160", "15.20 Mbps", isSelected = false, isRadio = false),
+                  TrackItem("1920 × 1080", "8.50 Mbps",  isSelected = false, isRadio = false),
+                  TrackItem("1280 × 720",  "4.80 Mbps",  isSelected = false, isRadio = false),
+                  TrackItem("854 × 480",   "2.10 Mbps",  isSelected = false, isRadio = false),
+                  TrackItem("640 × 360",   "0.90 Mbps",  isSelected = false, isRadio = false),
+                  TrackItem("426 × 240",   "0.40 Mbps",  isSelected = false, isRadio = false)
+              )
+
+              // Audio & Subtitles & Speed — all radio
+              fun audioTracks() = listOf(
+                  TrackItem("Auto",                  "Automatic audio",    isSelected = true,  isRadio = true),
+                  TrackItem("None",                  "No audio",           isSelected = false, isRadio = true),
+                  TrackItem("English • Stereo",      "192 kbps",           isSelected = false, isRadio = true),
+                  TrackItem("English • Surround 5.1","384 kbps",           isSelected = false, isRadio = true),
+                  TrackItem("Spanish • Stereo",      "128 kbps",           isSelected = false, isRadio = true),
+                  TrackItem("French • Mono",         "96 kbps",            isSelected = false, isRadio = true)
+              )
+
+              fun subtitleTracks() = listOf(
+                  TrackItem("Auto",    "Automatic subtitles", isSelected = true,  isRadio = true),
+                  TrackItem("None",    "No subtitles",        isSelected = false, isRadio = true),
+                  TrackItem("English", "Subtitles",           isSelected = false, isRadio = true),
+                  TrackItem("Spanish", "Subtitles",           isSelected = false, isRadio = true),
+                  TrackItem("French",  "Subtitles",           isSelected = false, isRadio = true)
+              )
+
+              fun speedTracks() = listOf(
+                  TrackItem("0.25x", "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("0.5x",  "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("0.75x", "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("1.0x",  "Playback speed", isSelected = true,  isRadio = true),
+                  TrackItem("1.25x", "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("1.5x",  "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("1.75x", "Playback speed", isSelected = false, isRadio = true),
+                  TrackItem("2.0x",  "Playback speed", isSelected = false, isRadio = true)
+              )
+          }
           EOF
 
       - name: Write TrackAdapter.kt
@@ -431,20 +486,41 @@ jobs:
                   notifyDataSetChanged()
               }
 
-              fun updateSelection(selectedIndex: Int) {
+              // For radio rows: single selection — deselect all others
+              fun selectRadio(index: Int) {
                   items.forEachIndexed { i, item ->
-                      val newSelected = i == selectedIndex
-                      if (item.isSelected != newSelected) {
-                          items[i] = item.copy(isSelected = newSelected)
-                          notifyItemChanged(i)
+                      if (item.isRadio) {
+                          val newSelected = (i == index)
+                          if (item.isSelected != newSelected) {
+                              items[i] = item.copy(isSelected = newSelected)
+                              notifyItemChanged(i)
+                          }
+                      } else {
+                          // Deselect all checkboxes when Auto/None radio selected
+                          if (item.isSelected) {
+                              items[i] = item.copy(isSelected = false)
+                              notifyItemChanged(i)
+                          }
                       }
                   }
               }
 
-              fun toggleCheckbox(selectedIndex: Int) {
-                  val item = items[selectedIndex]
-                  items[selectedIndex] = item.copy(isSelected = !item.isSelected)
-                  notifyItemChanged(selectedIndex)
+              // For checkbox rows: toggle, and deselect Auto/None radios
+              fun toggleCheckbox(index: Int) {
+                  val item = items[index]
+                  val newSelected = !item.isSelected
+                  items[index] = item.copy(isSelected = newSelected)
+                  notifyItemChanged(index)
+
+                  // Deselect Auto/None radio rows when any checkbox is picked
+                  if (newSelected) {
+                      items.forEachIndexed { i, it ->
+                          if (it.isRadio && it.isSelected) {
+                              items[i] = it.copy(isSelected = false)
+                              notifyItemChanged(i)
+                          }
+                      }
+                  }
               }
 
               inner class VH(view: View) : RecyclerView.ViewHolder(view) {
@@ -454,7 +530,11 @@ jobs:
                   private val checkToggle: CheckBox = view.findViewById(R.id.checkToggle)
 
                   init {
-                      view.setOnClickListener { onSelect(adapterPosition) }
+                      view.setOnClickListener {
+                          val pos = adapterPosition
+                          if (pos == RecyclerView.NO_ID.toInt()) return@setOnClickListener
+                          onSelect(pos)
+                      }
                   }
 
                   fun bind(item: TrackItem) {
@@ -489,54 +569,6 @@ jobs:
           }
           EOF
 
-      - name: Write MockData.kt
-        run: |
-          cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/MockData.kt << 'EOF'
-          package com.checkboxdemo
-
-          object MockData {
-
-              val videoTracks = listOf(
-                  TrackItem("Auto",               "",                   isSelected = true,  isRadio = true),
-                  TrackItem("None",               "",                   isSelected = false, isRadio = true),
-                  TrackItem("3840 × 2160",        "15.20 Mbps",         isSelected = false, isRadio = true),
-                  TrackItem("1920 × 1080",        "8.50 Mbps",          isSelected = false, isRadio = true),
-                  TrackItem("1280 × 720",         "4.80 Mbps",          isSelected = false, isRadio = true),
-                  TrackItem("854 × 480",          "2.10 Mbps",          isSelected = false, isRadio = true),
-                  TrackItem("640 × 360",          "0.90 Mbps",          isSelected = false, isRadio = true),
-                  TrackItem("426 × 240",          "0.40 Mbps",          isSelected = false, isRadio = true)
-              )
-
-              val audioTracks = listOf(
-                  TrackItem("Auto",               "Automatic audio",    isSelected = true,  isRadio = true),
-                  TrackItem("None",               "No audio",           isSelected = false, isRadio = true),
-                  TrackItem("English • Stereo",   "192 kbps",           isSelected = false, isRadio = true),
-                  TrackItem("English • Surround 5.1", "384 kbps",       isSelected = false, isRadio = true),
-                  TrackItem("Spanish • Stereo",   "128 kbps",           isSelected = false, isRadio = true),
-                  TrackItem("French • Mono",      "96 kbps",            isSelected = false, isRadio = true)
-              )
-
-              val subtitleTracks = listOf(
-                  TrackItem("Auto",               "Automatic subtitles",isSelected = true,  isRadio = true),
-                  TrackItem("None",               "No subtitles",       isSelected = false, isRadio = true),
-                  TrackItem("English",            "Subtitles",          isSelected = false, isRadio = true),
-                  TrackItem("Spanish",            "Subtitles",          isSelected = false, isRadio = true),
-                  TrackItem("French",             "Subtitles",          isSelected = false, isRadio = true)
-              )
-
-              val speedTracks = listOf(
-                  TrackItem("0.25x",              "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("0.5x",               "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("0.75x",              "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("1.0x",               "Playback speed",     isSelected = true,  isRadio = true),
-                  TrackItem("1.25x",              "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("1.5x",               "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("1.75x",              "Playback speed",     isSelected = false, isRadio = true),
-                  TrackItem("2.0x",               "Playback speed",     isSelected = false, isRadio = true)
-              )
-          }
-          EOF
-
       - name: Write VideoSettingsDialog.kt
         run: |
           cat > CheckboxDemo/app/src/main/java/com/checkboxdemo/VideoSettingsDialog.kt << 'EOF'
@@ -560,10 +592,7 @@ jobs:
               private lateinit var tabLayout: TabLayout
               private lateinit var adapter: TrackAdapter
 
-              private val videoItems  = MockData.videoTracks.toMutableList()
-              private val audioItems  = MockData.audioTracks.toMutableList()
-              private val subtitleItems = MockData.subtitleTracks.toMutableList()
-              private val speedItems  = MockData.speedTracks.toMutableList()
+              private var currentTab = 0
 
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
@@ -571,8 +600,10 @@ jobs:
                   setContentView(R.layout.dialog_player_settings)
 
                   val dm = context.resources.displayMetrics
-                  val width = (dm.widthPixels * 0.85).toInt()
-                  window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+                  window?.setLayout(
+                      (dm.widthPixels * 0.85).toInt(),
+                      ViewGroup.LayoutParams.WRAP_CONTENT
+                  )
                   window?.setBackgroundDrawableResource(android.R.color.transparent)
 
                   recyclerView = findViewById(R.id.recyclerView)!!
@@ -589,62 +620,60 @@ jobs:
                   }
 
                   recyclerView.layoutManager = LinearLayoutManager(context)
-                  adapter = TrackAdapter { index -> onItemSelected(index) }
+
+                  adapter = TrackAdapter { index ->
+                      val item = adapter.getItem(index)
+                      if (item.isRadio) {
+                          adapter.selectRadio(index)
+                      } else {
+                          adapter.toggleCheckbox(index)
+                      }
+                  }
                   recyclerView.adapter = adapter
 
-                  // Build tabs
-                  val tabs = listOf("Video", "Audio", "Subtitles", "Speed")
-                  tabs.forEach { tabLayout.addTab(tabLayout.newTab().setText(it)) }
+                  listOf("Video", "Audio", "Subtitles", "Speed").forEach {
+                      tabLayout.addTab(tabLayout.newTab().setText(it))
+                  }
 
                   tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                       override fun onTabSelected(tab: TabLayout.Tab?) {
-                          when (tab?.position) {
-                              0 -> showVideo()
-                              1 -> showAudio()
-                              2 -> showSubtitles()
-                              3 -> showSpeed()
-                          }
+                          currentTab = tab?.position ?: 0
+                          showTab(currentTab)
                       }
                       override fun onTabUnselected(tab: TabLayout.Tab?) {}
                       override fun onTabReselected(tab: TabLayout.Tab?) {}
                   })
 
-                  // Show Video tab by default
-                  showVideo()
+                  showTab(0)
               }
 
-              private var currentTab = 0
-
-              private fun onItemSelected(index: Int) {
-                  when (currentTab) {
-                      0 -> { adapter.updateSelection(index); videoItems.forEachIndexed { i, item -> if (i != index && videoItems[i].isSelected) { /* reset */ } } }
-                      1 -> adapter.updateSelection(index)
-                      2 -> adapter.updateSelection(index)
-                      3 -> adapter.updateSelection(index)
+              private fun showTab(tab: Int) {
+                  val list = when (tab) {
+                      0 -> MockData.videoTracks()
+                      1 -> MockData.audioTracks()
+                      2 -> MockData.subtitleTracks()
+                      3 -> MockData.speedTracks()
+                      else -> emptyList()
                   }
-              }
-
-              private fun showVideo() {
-                  currentTab = 0
-                  adapter.submit(videoItems)
-              }
-
-              private fun showAudio() {
-                  currentTab = 1
-                  adapter.submit(audioItems)
-              }
-
-              private fun showSubtitles() {
-                  currentTab = 2
-                  adapter.submit(subtitleItems)
-              }
-
-              private fun showSpeed() {
-                  currentTab = 3
-                  adapter.submit(speedItems)
+                  adapter.submit(list)
               }
           }
           EOF
+
+      - name: Write TrackAdapter getItem helper
+        run: |
+          # Append getItem() to TrackAdapter
+          cat >> CheckboxDemo/app/src/main/java/com/checkboxdemo/TrackAdapter.kt << 'EOF'
+
+          // Extension to expose items safely
+          fun TrackAdapter.getItem(index: Int): TrackItem {
+              return this.itemAt(index)
+          }
+          EOF
+
+          # Add itemAt() inside the class — patch it in
+          sed -i 's/override fun getItemCount() = items.size/fun itemAt(index: Int): TrackItem = items[index]\n    override fun getItemCount() = items.size/' \
+            CheckboxDemo/app/src/main/java/com/checkboxdemo/TrackAdapter.kt
 
       - name: Write MainActivity.kt
         run: |
@@ -656,7 +685,6 @@ jobs:
           import com.checkboxdemo.databinding.ActivityMainBinding
 
           class MainActivity : AppCompatActivity() {
-
               private lateinit var binding: ActivityMainBinding
 
               override fun onCreate(savedInstanceState: Bundle?) {
@@ -688,7 +716,7 @@ jobs:
           curl -sL "https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar" \
             -o CheckboxDemo/gradle/wrapper/gradle-wrapper.jar
 
-      - name: Write gradlew script
+      - name: Write gradlew
         run: |
           cat > CheckboxDemo/gradlew << 'EOF'
           #!/usr/bin/env sh
