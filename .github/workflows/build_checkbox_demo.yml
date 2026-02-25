@@ -24,6 +24,14 @@ jobs:
           mkdir -p CheckboxDemo/app/src/main/res/values
           mkdir -p CheckboxDemo/gradle/wrapper
 
+      - name: Write gradle.properties
+        run: |
+          cat > CheckboxDemo/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+
       - name: Write settings.gradle.kts
         run: |
           cat > CheckboxDemo/settings.gradle.kts << 'EOF'
