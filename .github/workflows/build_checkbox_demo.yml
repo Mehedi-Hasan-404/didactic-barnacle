@@ -137,7 +137,7 @@ jobs:
           cat > CheckboxDemo/app/src/main/res/values/themes.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <style name="Theme.CheckboxDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+              <style name="Theme.CheckboxDemo" parent="Theme.Material3.DayNight.NoActionBar">
                   <item name="colorPrimary">#EF4444</item>
                   <item name="colorPrimaryVariant">#DC2626</item>
                   <item name="colorOnPrimary">#FFFFFF</item>
@@ -152,7 +152,7 @@ jobs:
                   <item name="materialAlertDialogTheme">@style/ThemeOverlay.CheckboxDemo.Dialog</item>
               </style>
 
-              <style name="ThemeOverlay.CheckboxDemo.Dialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+              <style name="ThemeOverlay.CheckboxDemo.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
                   <item name="colorSurface">#1F1F1F</item>
                   <item name="colorOnSurface">#FFFFFF</item>
                   <item name="colorPrimary">#EF4444</item>
